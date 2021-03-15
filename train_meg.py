@@ -8,7 +8,7 @@ import utils
 import networkx as nx
 import typer
 
-from models.explainer import CF_Tox21, NCF_Tox21, Agent, CF_Esol, NCF_Esol, CF_Cycliq, NCF_Cycliq
+from models.explainer import CF_Tox21, NCF_Tox21, Agent, CF_Esol, NCF_Esol
 from torch.utils.tensorboard import SummaryWriter
 from utils import SortedQueue, morgan_bit_fingerprint, get_split, get_dgn, mol_to_smiles, x_map_tox21, pyg_to_mol_tox21, mol_from_smiles, mol_to_tox21_pyg
 from torch.nn import functional as F
@@ -101,96 +101,6 @@ def tox21(general_params,
     overall_queue.extend(ncf_queue.data_)
 
     save_results(base_path, overall_queue, args)
-
-def cycliq(general_params,
-           base_path,
-           writer,
-           num_counterfactuals,
-           num_non_counterfactuals,
-           original_graph,
-           model_to_explain,
-           **args):
-
-    out, (node_embs, original_encoding) = model_to_explain(original_graph.x,
-                                              original_graph.edge_index)
-
-    logits = F.softmax(out, dim=-1).detach().squeeze()
-    pred_class = logits.argmax().item()
-
-    assert pred_class == original_graph.y.item()
-
-    params = {
-        'init_graph': original_graph,
-        'allow_removal': general_params['allow_removal'],
-        'allow_node_addition': general_params['allow_node_addition'],
-        'allow_edge_addition': general_params['allow_edge_addition'],
-        'allow_no_modification': general_params['allow_no_modification'],
-        'discount_factor': general_params['discount_factor'],
-        'max_steps': general_params['max_steps'],
-        # Task-specific params
-        'original_graph': original_graph,
-        'model_to_explain': model_to_explain,
-        'weight_sim': 0.4,
-        'similarity_measure': 'neural_encoding'
-    }
-
-    cf_queue = SortedQueue(num_counterfactuals, sort_predicate=lambda mol: mol['reward'])
-    cf_env = CF_Cycliq(**params)
-    cf_env.initialize()
-
-    ncf_queue = SortedQueue(num_non_counterfactuals, sort_predicate=lambda mol: mol['reward'])
-    params['max_steps'] = 1
-    params['weight_sim'] = 0.6
-    params['allow_edge_addition'] = True
-    params['allow_removal'] = False
-    ncf_env = NCF_Cycliq(**params)
-    ncf_env.initialize()
-
-    def action_encoder(action):
-        return model_to_explain(action.x, action.edge_index)[1][1].numpy()
-    try:
-        meg_train(writer,
-                  action_encoder,
-                  model_to_explain.num_hidden * 2,
-                  cf_env,
-                  cf_queue,
-                  marker="cf",
-                  tb_name="cycliq",
-                  id_function=lambda action: hash(map(tuple, action.edge_index)),
-                  args=args)
-    except KeyboardInterrupt:
-        print("MEG Cycle interrupted.")
-
-    try:
-        meg_train(writer,
-                  action_encoder,
-                  model_to_explain.num_hidden * 2,
-                  ncf_env,
-                  ncf_queue,
-                  marker="ncf",
-                  tb_name="cycliq",
-                  id_function=lambda action: hash(map(tuple, action.edge_index)),
-                  args=args)
-    except KeyboardInterrupt:
-        print("MEG Cycle interrupted.")
-
-    print("MEG Save")
-    overall_queue = []
-    overall_queue.append({
-        'pyg': original_graph,
-        'marker': 'og',
-        'encoding': node_embs.numpy(),
-        'prediction': {
-            'type': 'bin_classification',
-            'output': logits.numpy().tolist(),
-            'for_explanation': original_graph.y.item(),
-            'class': original_graph.y.item()
-        }
-    })
-    overall_queue.extend(cf_queue.data_)
-    overall_queue.extend(ncf_queue.data_)
-
-    save_results(base_path, overall_queue, args, quantitative=True)
 
 def esol(general_params,
          base_path,
@@ -421,8 +331,6 @@ def main(dataset: str,
         meg = tox21
     elif dataset == 'esol':
         meg = esol
-    elif dataset == 'cycliq':
-        meg = cycliq
 
     torch.manual_seed(seed)
 

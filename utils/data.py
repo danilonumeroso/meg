@@ -10,8 +10,6 @@ from torch_geometric.datasets import TUDataset, MoleculeNet
 from torch_sparse import coalesce
 from torch_geometric.data import Data
 from torch_geometric.datasets.molecule_net import x_map, e_map
-from utils.cycliq import CYCLIQ
-
 
 def pre_transform(sample, n_pad):
     sample.x = F.pad(sample.x, (0,n_pad), "constant")
@@ -32,13 +30,6 @@ def get_split(dataset_name, split, experiment):
         ds = MoleculeNet(
             'data/esol',
             name='ESOL'
-        )
-
-
-    elif dataset_name.lower() == 'cycliq':
-        ds = CYCLIQ(
-            'data/cycliq-evo',
-            name=dataset_name.upper()
         )
 
 
@@ -157,61 +148,8 @@ def _preprocess_esol(experiment_name, batch_size):
         train.num_classes,
     )
 
-def _preprocess_cycliq(experiment_name, batch_size):
-    return _cycliq("CYCLIQ", experiment_name, batch_size)
-
-def _cycliq(name, experiment_name, batch_size):
-
-    dataset_tr = CYCLIQ(
-        'data/cycliq-evo',
-        name='CYCLIQ'
-    )
-
-    dataset_ts = CYCLIQ(
-        'data/cycliq-evo',
-        name='CYCLIQTS3'
-    )
-
-    data_list = (
-        [dataset_tr.get(idx) for idx in range(len(dataset_tr))]
-    )
-
-    for i, d in enumerate(data_list):
-        d.gexf_id = f"{i+1}.{d.y.item()}.gexf"
-
-    random.shuffle(data_list)
-
-    n = len(data_list) // 10
-
-    train_data = data_list[n:]
-    val_data = data_list[:n]
-    test_data = [dataset_ts.get(idx) for idx in range(len(dataset_ts))]
-
-    train = dataset_tr
-    val = dataset_tr.copy()
-    test = dataset_ts
-    train.data, train.slices = train.collate(train_data)
-    val.data, val.slices = train.collate(val_data)
-    test.data, test.slices = train.collate(test_data)
-
-    torch.save((train.data, train.slices), f'runs/{name.lower()}/{experiment_name}/splits/train.pth')
-    torch.save((val.data, val.slices), f'runs/{name.lower()}/{experiment_name}/splits/val.pth')
-    torch.save((test.data, test.slices), f'runs/{name.lower()}/{experiment_name}/splits/test.pth')
-
-
-    return (
-        DataLoader(train, batch_size=batch_size),
-        DataLoader(val,   batch_size=batch_size),
-        DataLoader(test,  batch_size=batch_size),
-        train,
-        val,
-        test,
-        max(train.num_features, val.num_features, test.num_features),
-        train.num_classes,
-    )
 
 _PREPROCESS = {
     'tox21': _preprocess_tox21,
-    'esol': _preprocess_esol,
-    'cycliq': _preprocess_cycliq
+    'esol': _preprocess_esol
 }
