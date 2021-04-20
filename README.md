@@ -29,18 +29,18 @@ Finally, to start training MEG:
 python train_meg.py [tox21 | esol] <experiment_name>
 ```
 MEG will automatically retrieve the checkpoint of the model and save its
-results to runs/<dataset_name>/<experiment_name>/meg_output.
+results to ```runs/<dataset_name>/<experiment_name>/meg_output```.
 
-# Cite
-Please, cite our paper if you happen to use our code in your own work.
+# Citing
+Please, cite our paper if you use MEG in your own work.
 
 ```
-@misc{numeroso2020explaining,
-      title={Explaining Deep Graph Networks with Molecular Counterfactuals},
+@misc{numeroso2021meg,
+      title={MEG: Generating Molecular Counterfactual Explanations for Deep Graph Networks},
       author={Danilo Numeroso and Davide Bacciu},
-      year={2020},
-      eprint={2011.05134},
+      year={2021},
+      eprint={2104.08060},
       archivePrefix={arXiv},
-      primaryClass={q-bio.QM}
+      primaryClass={cs.LG}
 }
 ```
