@@ -7,6 +7,7 @@ import os
 import utils
 import networkx as nx
 import typer
+import random
 
 from models.explainer import CF_Tox21, NCF_Tox21, Agent, CF_Esol, NCF_Esol
 from torch.utils.tensorboard import SummaryWriter
@@ -18,7 +19,6 @@ def tox21(general_params,
           base_path,
           writer,
           num_counterfactuals,
-          num_non_counterfactuals,
           original_molecule,
           model_to_explain,
           **args):
@@ -58,10 +58,6 @@ def tox21(general_params,
     cf_env = CF_Tox21(**params)
     cf_env.initialize()
 
-    ncf_queue = SortedQueue(num_non_counterfactuals, sort_predicate=lambda mol: mol['reward'])
-    ncf_env = NCF_Tox21(**params)
-    ncf_env.initialize()
-
     def action_encoder(action):
         return morgan_bit_fingerprint(action, args['fp_length'], args['fp_radius']).numpy()
 
@@ -72,15 +68,6 @@ def tox21(general_params,
               cf_queue,
               marker="cf",
               tb_name="tox21",
-              id_function=lambda action: action,
-              args=args)
-    meg_train(writer,
-              action_encoder,
-              args['fp_length'],
-              ncf_env,
-              ncf_queue,
-              marker="ncf",
-              tb_name="tox_21",
               id_function=lambda action: action,
               args=args)
 
@@ -98,7 +85,6 @@ def tox21(general_params,
         }
     })
     overall_queue.extend(cf_queue.data_)
-    overall_queue.extend(ncf_queue.data_)
 
     save_results(base_path, overall_queue, args)
 
@@ -106,7 +92,6 @@ def esol(general_params,
          base_path,
          writer,
          num_counterfactuals,
-         num_non_counterfactuals,
          original_molecule,
          model_to_explain,
          **args):
@@ -135,10 +120,6 @@ def esol(general_params,
     cf_env = CF_Esol(**params)
     cf_env.initialize()
 
-    ncf_queue = SortedQueue(num_non_counterfactuals, sort_predicate=lambda mol: mol['reward'])
-    ncf_env = NCF_Esol(**params)
-    ncf_env.initialize()
-
     def action_encoder(action):
         return morgan_bit_fingerprint(action, args['fp_length'], args['fp_radius']).numpy()
 
@@ -148,14 +129,6 @@ def esol(general_params,
               cf_env,
               cf_queue,
               marker="cf",
-              tb_name="esol",
-              id_function=lambda action: action,
-              args=args)
-    meg_train(writer,
-              action_encoder,
-              args['fp_length'],
-              ncf_env, ncf_queue,
-              marker="ncf",
               tb_name="esol",
               id_function=lambda action: action,
               args=args)
@@ -173,7 +146,6 @@ def esol(general_params,
         }
     })
     overall_queue.extend(cf_queue.data_)
-    overall_queue.extend(ncf_queue.data_)
 
     save_results(base_path, overall_queue, args)
 
@@ -267,23 +239,20 @@ def meg_train(writer,
             environment.initialize()
 
 
-def save_results(base_path, queue, args, quantitative=False):
+def save_results(base_path, queue, args):
     output_dir = base_path + f"/meg_output/{args['sample']}"
     embedding_dir = output_dir + "/embeddings"
-    gexf_dir = output_dir + "/gexf_data"
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
         os.makedirs(embedding_dir)
-        os.makedirs(gexf_dir)
 
     for i, molecule in enumerate(queue):
         np.save(embedding_dir + f"/{i}", molecule.pop('encoding'))
         pyg = molecule.pop('pyg')
-        if quantitative:
-            g = to_networkx(pyg, to_undirected=True)
-            nx.write_gexf(g, f"{gexf_dir}/{i}.{molecule['prediction']['class']}.gexf")
 
+    with open(output_dir + "/seed", "w") as outf:
+        json.dump(args['seed'], outf)
 
     with open(output_dir + "/data.json", "w") as outf:
         json.dump(queue, outf, indent=2)
@@ -294,7 +263,6 @@ def main(dataset: str,
          epochs: int = typer.Option(5000),
          max_steps_per_episode: int = typer.Option(1),
          num_counterfactuals: int = typer.Option(10),
-         num_non_counterfactuals: int = typer.Option(10),
          fp_length: int = typer.Option(1024),
          fp_radius: int = typer.Option(2),
          lr: float = typer.Option(1e-4),
@@ -309,7 +277,7 @@ def main(dataset: str,
          allow_node_addition: bool = typer.Option(True),
          allow_edge_addition: bool = typer.Option(True),
          allow_bonds_between_rings: bool = typer.Option(True),
-         seed: int = typer.Option(0)
+         seed: int = typer.Option(random.randint(0, 2**12))
 ):
 
     general_params = {
@@ -340,7 +308,6 @@ def main(dataset: str,
         base_path,
         SummaryWriter(f'{base_path}/plots'),
         num_counterfactuals,
-        num_non_counterfactuals,
         get_split(dataset.lower(), 'test', experiment_name)[sample],
         model_to_explain=get_dgn(dataset.lower(), experiment_name),
         experiment_name=experiment_name,
@@ -355,7 +322,8 @@ def main(dataset: str,
         discount=discount,
         replay_buffer_size=replay_buffer_size,
         batch_size=batch_size,
-        update_interval=update_interval)
+        update_interval=update_interval,
+        seed=seed)
 
 
 if __name__ == '__main__':
