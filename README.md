@@ -1,46 +1,42 @@
 # MEG: Molecular Explanation Generator
-This repository contains the official (PyTorch) implementation of MEG, from the paper [Explaining Deep Graph Networks with Molecular Counterfactuals](https://arxiv.org/abs/2011.05134).
+This repository contains the implementation of [MEG](https://arxiv.org/abs/2104.08060) (IJCNN 2021).
 
 # Usage
 We assume miniconda (or anaconda) to be installed.
 
-First, install the dependencies:
+### Install dependencies
+Run the following commands: 
 ```
 source setup/install.sh [cpu | cu92 | cu101 | cu102]
-```
-By default, the script will install the 1.6.0 cpu version of PyTorch and PyTorch Geometric. If you want to install the cuda version, just pass the argument. Instead, if you wish to install a different version (e.g, 1.7+) you need to modify the first line of the script:
-
-```
-#!/bin/sh
-CUDA_VERSION=${1:-cpu}
-TORCH_VERSION=1.6.0 # modify this
-TORCH_GEOMETRIC_VERSION=1.6.0 # and this
+conda activate meg
 ```
 
-The setup script will create a conda environment named "meg".
+### Train DGN
 
-Now you can train the DGN to be explained by running:
+Train the DGN to be explained by running:
 ```
 python train_dgn.py [tox21 | esol] <experiment_name>
 ```
 
-Finally, to start training MEG:
-```
-python train_meg.py [tox21 | esol] <experiment_name>
-```
-MEG will automatically retrieve the checkpoint of the model and save its
-results to ```runs/<dataset_name>/<experiment_name>/meg_output```.
+### Generate counterfactuals
 
-# Citing
-Please, cite our paper if you use MEG in your own work.
-
+To generate counterfactual explanations for a specific sample, run:
 ```
-@misc{numeroso2021meg,
+python train_meg.py [tox21 | esol] <experiment_name> --sample <INTEGER>
+```
+Results will be saved at ```runs/<dataset_name>/<experiment_name>/meg_output```.
+
+# Bibtex
+```
+@conference{numeroso2021,
       title={MEG: Generating Molecular Counterfactual Explanations for Deep Graph Networks},
       author={Danilo Numeroso and Davide Bacciu},
       year={2021},
-      eprint={2104.08060},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG}
+      date={2021-07-18},
+      booktitle={Proceedings of the International Joint Conference on Neural Networks (IJCNN 2021)},
+      organization={IEEE},
+      keywords={deep learning for graphs, explainable AI, graph data, structured data processing},
+      pubstate={forthcoming},
+      tppubtype={conference}
 }
 ```
