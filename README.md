@@ -28,15 +28,14 @@ Results will be saved at ```runs/<dataset_name>/<experiment_name>/meg_output```.
 
 # Bibtex
 ```
-@conference{numeroso2021,
-      title={MEG: Generating Molecular Counterfactual Explanations for Deep Graph Networks},
-      author={Danilo Numeroso and Davide Bacciu},
+@inproceedings{numeroso2021,
+      author={Numeroso, Danilo and Bacciu, Davide},
+      booktitle={2021 International Joint Conference on Neural Networks (IJCNN)}, 
+      title={MEG: Generating Molecular Counterfactual Explanations for Deep Graph Networks}, 
       year={2021},
-      date={2021-07-18},
-      booktitle={Proceedings of the International Joint Conference on Neural Networks (IJCNN 2021)},
-      organization={IEEE},
-      keywords={deep learning for graphs, explainable AI, graph data, structured data processing},
-      pubstate={forthcoming},
-      tppubtype={conference}
+      volume={},
+      number={},
+      pages={1-8},
+      doi={10.1109/IJCNN52387.2021.9534266}
 }
 ```
